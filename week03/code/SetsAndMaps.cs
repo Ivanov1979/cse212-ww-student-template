@@ -1,4 +1,9 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Net.Http;
 using System.Text.Json;
+
 
 public static class SetsAndMaps
 {
@@ -21,8 +26,30 @@ public static class SetsAndMaps
     /// <param name="words">An array of 2-character words (lowercase, no duplicates)</param>
     public static string[] FindPairs(string[] words)
     {
-        // TODO Problem 1 - ADD YOUR CODE HERE
-        return [];
+        // Encode each 2-letter word as an int: (a,b) -> a*26 + b
+        static int Key(string w) => (w[0] - 'a') * 26 + (w[1] - 'a');
+        static int ReverseKey(string w) => (w[1] - 'a') * 26 + (w[0] - 'a');
+
+        var seen = new HashSet<int>();
+        var result = new List<string>();
+
+        foreach (var w in words)
+        {
+            if (w[0] == w[1]) continue; // "aa" case
+
+            int revKey = ReverseKey(w);
+
+            if (seen.Contains(revKey))
+            {
+                result.Add($"{w} & {new string(new[] { w[1], w[0] })}");
+            }
+            else
+            {
+                seen.Add(Key(w));
+            }
+        }
+
+        return result.Count == 0 ? [] : result.ToArray();
     }
 
     /// <summary>
@@ -39,14 +66,30 @@ public static class SetsAndMaps
     public static Dictionary<string, int> SummarizeDegrees(string filename)
     {
         var degrees = new Dictionary<string, int>();
+
         foreach (var line in File.ReadLines(filename))
         {
             var fields = line.Split(",");
-            // TODO Problem 2 - ADD YOUR CODE HERE
+
+
+            if (fields.Length < 4)
+                continue;
+
+            string degree = fields[3].Trim();
+
+            if (degrees.ContainsKey(degree))
+            {
+                degrees[degree] += 1;
+            }
+            else
+            {
+                degrees[degree] = 1;
+            }
         }
 
         return degrees;
     }
+
 
     /// <summary>
     /// Determine if 'word1' and 'word2' are anagrams.  An anagram
@@ -66,9 +109,40 @@ public static class SetsAndMaps
     /// </summary>
     public static bool IsAnagram(string word1, string word2)
     {
-        // TODO Problem 3 - ADD YOUR CODE HERE
-        return false;
+        // Normalize: lowercase and remove spaces
+        word1 = word1.ToLower().Replace(" ", "");
+        word2 = word2.ToLower().Replace(" ", "");
+
+        // If lengths differ, cannot be anagrams
+        if (word1.Length != word2.Length)
+            return false;
+
+        var counts = new Dictionary<char, int>();
+
+        // Count letters in word1
+        foreach (char c in word1)
+        {
+            if (counts.ContainsKey(c))
+                counts[c]++;
+            else
+                counts[c] = 1;
+        }
+
+        // Subtract counts using word2
+        foreach (char c in word2)
+        {
+            if (!counts.ContainsKey(c))
+                return false;
+
+            counts[c]--;
+
+            if (counts[c] < 0)
+                return false;
+        }
+
+        return true;
     }
+
 
     /// <summary>
     /// This function will read JSON (Javascript Object Notation) data from the 
@@ -101,6 +175,26 @@ public static class SetsAndMaps
         // on those classes so that the call to Deserialize above works properly.
         // 2. Add code below to create a string out each place a earthquake has happened today and its magitude.
         // 3. Return an array of these string descriptions.
-        return [];
+        if (featureCollection?.Features == null)
+            return [];
+
+        var results = new List<string>();
+
+        foreach (var feature in featureCollection.Features)
+        {
+            var props = feature.Properties;
+            if (props == null) continue;
+
+            // Build the string: "Place - Mag X"
+            string place = string.IsNullOrWhiteSpace(props.Place) ? "Unknown location" : props.Place;
+
+            // Magnitude can be null sometimes; skip those entries
+            if (props.Mag == null) continue;
+
+            results.Add($"{place} - Mag {props.Mag}");
+        }
+
+        return results.ToArray();
+
     }
 }
